@@ -1,0 +1,172 @@
+//---------------------------------------------------------------------------
+
+#ifndef Unit1H
+#define Unit1H
+//---------------------------------------------------------------------------
+#include <Classes.hpp>
+#include <Controls.hpp>
+#include <StdCtrls.hpp>
+#include <Forms.hpp>
+#include <ExtCtrls.hpp>
+#include <Graphics.hpp>
+#include <Menus.hpp>
+#include <ScktComp.hpp>
+#include <Grids.hpp>
+#include <Psock.hpp>
+
+#define BlackPawn 1
+#define BlackHorse 2
+#define BlackBishop 3
+#define BlackRook 5
+#define BlackQueen 8
+#define BlackKing 9
+
+#define WhitePawn -1
+#define WhiteHorse -2
+#define WhiteBishop -3
+#define WhiteRook -5
+#define WhiteQueen -8
+#define WhiteKing -9
+//---------------------------------------------------------------------------
+class TGame : public TForm
+{
+__published:	// IDE-managed Components
+        TImage *Board;
+        TImage *WLRook;
+        TImage *WRRook;
+        TImage *WLHorse;
+        TImage *WRHorse;
+        TImage *WLBishop;
+        TImage *WRBishop;
+        TImage *WKing;
+        TImage *WQueen;
+        TImage *BLHorse;
+        TImage *BLBishop;
+        TImage *BLRook;
+        TImage *BRRook;
+        TImage *BRHorse;
+        TImage *BRBishop;
+        TImage *BQueen;
+        TImage *BKing;
+        TImage *WAPawn;
+        TImage *WBPawn;
+        TImage *WCPawn;
+        TImage *WDPawn;
+        TImage *WEPawn;
+        TImage *WFPawn;
+        TImage *WGPawn;
+        TImage *WHPawn;
+        TImage *BAPawn;
+        TImage *BBPawn;
+        TImage *BCPawn;
+        TImage *BDPawn;
+        TImage *BEPawn;
+        TImage *BFPawn;
+        TImage *BGPawn;
+        TImage *BHPawn;
+        TImage *Null_Image;
+        TServerSocket *ServerSocket1;
+        TClientSocket *ClientSocket1;
+        TMainMenu *MainMenu1;
+        TMenuItem *Play;
+        TMainMenu *MainMenu2;
+        TMemo *Memo1;
+        TPowersock *Powersock1;
+        TButton *Button1;
+        TEdit *Edit2;
+        TMemo *Memo2;
+        TLabel *Label1;
+        TLabel *Label2;
+        TMenuItem *Save;
+        TMenuItem *Exit;
+        TMenuItem *About;
+        TEdit *Edit1;
+        void __fastcall FormClose(TObject *Sender, TCloseAction &Action);
+        void __fastcall BoardMouseUp(TObject *Sender, TMouseButton Button,
+          TShiftState Shift, int X, int Y);
+        void __fastcall ServerSocket1ClientRead(TObject *Sender,
+          TCustomWinSocket *Socket);
+        void __fastcall Button1Click(TObject *Sender);
+        void __fastcall ClientSocket1Read(TObject *Sender,
+          TCustomWinSocket *Socket);
+        void __fastcall ExitClick(TObject *Sender);
+        void __fastcall AboutClick(TObject *Sender);
+private:	// User declarations
+public:		// User declarations
+        TImage *FrozenFigure[100];
+        int Steps,ThisTag,NewTag,NullTag,h;
+        int WKingSteps,BKingSteps,WRookSteps,BRookSteps;
+        int ThisX,ThisY,NewX,NewY;
+        int WQ,WR,WB,WH;
+        int BQ,BR,BB,BH;
+        int Check_X,Check_Y,Check__X,Check__Y;
+        int KingX,KingY,MyKingX,MyKingY;
+        int CheckX,CheckY,AttackX,AttackY,DiffenceB,DiffenceR;
+        bool CHECK,MAT,DISSTEP,FREEZE;
+        void Initialize();
+        void Step();
+        bool Flag;
+        void  DrawSelect( int , int , TColor);
+        void  ChangeStep();
+        void SendCoord();
+        bool CheckStep();
+        bool RooksRules();
+        bool HorsesRules();
+        bool BishopsRules();
+        bool KingsRules();
+        bool PawnsRules();
+        bool WhiteThis();
+        bool BlackThis();
+        bool WhiteNew();
+        bool BlackNew();
+        bool White(int,int);
+        bool Black(int,int);
+        bool SameFigColor(int,int,int,int);
+        bool SameFigColor();
+        bool PawnStep();
+        bool PawnBeat();
+        bool NotReverseStep();
+        bool Figure();
+        bool PawnChange();
+        void ChooseFigure();
+        void Check();
+        bool Screen();
+        bool KingDisStep(int,int);
+        void Attack(int,int);
+        bool Beat(int,int);
+        bool BeatByKing(int,int);
+        void Freeze();
+        void KingSearch();
+        void MyKing();
+        bool King(int,int);
+        bool Queen(int,int);
+        bool Rook(int,int);
+        bool Bishop(int,int);
+        bool Horse(int,int);
+        bool Pawn(int,int);
+        void StayOnKing();
+        bool RookKing();
+        void Castling();
+        bool WhRook(int,int);
+        bool BlRook(int,int);
+        bool WhQueen(int,int);
+        bool BlQueen(int,int);
+        void CheckWay(int,int,int,int);
+        void Mat();
+
+        void MakeStep (TStep);
+        bool CheckStep(TStep);
+        void SaveGame();
+        void CreateGame();
+        void FinishGame();
+        void SendMessage(AnsiString);
+        void SetColor();
+        void Connect();
+
+
+        __fastcall TGame(TComponent* Owner);
+};
+//---------------------------------------------------------------------------
+extern PACKAGE TGame *Game;
+//---------------------------------------------------------------------------
+#endif

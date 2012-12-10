@@ -1,0 +1,30 @@
+//---------------------------------------------------------------------------
+
+#ifndef UBoardH
+#define UBoardH
+
+
+#include "UField.h"
+#include "UFigure.h"
+#include <Classes.hpp>
+#include <Controls.hpp>
+#include <StdCtrls.hpp>
+#include <Forms.hpp>
+#include <ExtCtrls.hpp>
+#include <Graphics.hpp>
+#include <Menus.hpp>
+#include <ScktComp.hpp>
+#include <Grids.hpp>
+#include <Psock.hpp>
+
+
+//---------------------------------------------------------------------------
+class  TBoard
+{
+   public:
+   TImage* Image[8][8];
+   TFigure Figure[8][8];
+
+
+} ;
+#endif

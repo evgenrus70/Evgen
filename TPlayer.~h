@@ -1,0 +1,22 @@
+//---------------------------------------------------------------------------
+
+#ifndef TPlayerH
+#define TPlayerH
+#include "TGame.h"
+#include "TBoard.h"
+#include "TMode.h"
+#include "Field.h"
+#include "TStep.h"
+#include "TFigure.h"
+#include "THistory.h"
+#include "TPlayer.h"
+//---------------------------------------------------------------------------
+
+class TPlayer
+{
+   AnsiString Name;
+   AnsiString Adress;
+
+};
+#endif
+ 

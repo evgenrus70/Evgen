@@ -1,0 +1,24 @@
+//---------------------------------------------------------------------------
+
+#ifndef Unit7H
+#define Unit7H
+#include "Unit1.h"
+#include "Unit2.h"
+#include "Unit3.h"
+#include "Unit4.h"
+#include "Unit5.h"
+#include "Unit6.h"
+#include "Unit7.h"
+#include "Unit8.h"
+#include "Unit9.h"
+#include "Unit10.h"
+//---------------------------------------------------------------------------
+
+class TPlayer
+{
+   AnsiString Name;
+   AnsiString Adress;
+
+};
+#endif
+ 

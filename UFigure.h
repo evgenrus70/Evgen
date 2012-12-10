@@ -1,0 +1,24 @@
+//---------------------------------------------------------------------------
+
+#ifndef UFigureH
+#define UFigureH
+//---------------------------------------------------------------------------
+
+#include "UStep.h"
+
+class TFigure
+{
+
+    enum
+   {
+     white , black
+   }   TColor;
+
+public:
+   bool CheckStep(TStep);
+   bool Freeze();
+   int Tag;
+   AnsiString Color;
+   AnsiString GetColor(int);
+};
+#endif

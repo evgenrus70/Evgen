@@ -1,0 +1,17 @@
+//---------------------------------------------------------------------------
+#ifndef UFieldH
+#define UFieldH
+
+#include "system.hpp"
+
+
+//---------------------------------------------------------------------------
+class TField
+{
+    public:
+     int  XPos;
+     int  YPos;
+     bool IsEmpty(int);
+};
+
+#endif

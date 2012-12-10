@@ -1,0 +1,1568 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "Unit1.h"
+#include "Unit2.h"
+#include "Unit3.h"
+#include "Unit4.h"
+#include "Unit5.h"
+#include "Unit6.h"
+#include "Unit7.h"
+#include "Unit8.h"
+#include "Unit9.h"
+#include "Unit10.h"
+
+#include <clipbrd.hpp>
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TGame *Game;
+TImage* Image[8][8];
+
+
+//---------------------------------------------------------------------------
+__fastcall TGame::TGame(TComponent* Owner)
+        : TForm(Owner)
+{
+    for ( int i = 2; i < 6; i++ )
+    for ( int j =0 ; j < 8; j++ )
+       Image[i][j] = NULL;
+
+Image[0][0] = BLRook;Image[0][1] = BLHorse; Image[0][2] = BLBishop;Image[0][3] =  BQueen;
+Image[0][4] = BKing; Image[0][5] = BRBishop;Image[0][6] = BRHorse; Image[0][7] =  BRRook;
+Image[1][0] = BAPawn;Image[1][1] = BBPawn;  Image[1][2] = BCPawn;  Image[1][3] =  BDPawn;
+Image[1][4] = BEPawn;Image[1][5] = BFPawn;  Image[1][6] = BGPawn;  Image[1][7] =  BHPawn;
+
+Image[6][0] = WAPawn;Image[6][1] = WBPawn;  Image[6][2] = WCPawn;  Image[6][3] = WDPawn;
+Image[6][4] = WEPawn;Image[6][5] = WFPawn;  Image[6][6] = WGPawn;  Image[6][7] = WHPawn;
+Image[7][0] = WLRook;Image[7][1] = WLHorse; Image[7][2] = WLBishop;Image[7][3] = WQueen;
+Image[7][4] = WKing; Image[7][5] = WRBishop;Image[7][6] = WRHorse; Image[7][7] = WRRook;
+
+
+
+if ( Mode->Colors->ItemIndex == 1 )
+{
+TImage *Temp;
+int j;
+
+for ( int i = 0,j = 3;i < 8; i+=7 )
+      {
+        Temp = Image[i][j];
+        Image[i][j] = Image[i][j+1];
+        Image[i][j+1] = Temp;
+
+      }
+
+  for ( int i = 0; i < 2; i++ )
+  {
+        for (int j = 0; j < 8; j++ )
+      {
+         Temp = Image[i][j];
+         Image[i][j] = Image[7-i][j];
+         Image[7-i][j] = Temp;
+       }
+  }
+
+  for ( int j = 0; j <8 ; j++ )
+{
+ Image[0][j]->Top = 32;
+ Image[1][j]->Top = 72;
+ Image[6][j]->Top = 272;
+ Image[7][j]->Top = 312;
+}
+  WQueen->Left = 192;
+  BQueen->Left = WQueen->Left;
+  WKing->Left = 152;
+  BKing->Left = WKing->Left;
+}
+
+
+   Initialize();
+   Edit1->Text = "            Белые начинают          " ;
+   
+
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TGame::FormClose(TObject *Sender, TCloseAction &Action)
+{
+Mode->Close();
+}
+//---------------------------------------------------------------------------
+void TGame::Initialize()
+{
+        ThisX = ThisY = 0;
+        NewX = NewY = 0;
+        Steps = 0;
+        Flag = 0;
+        WKingSteps = BKingSteps = 0;
+        NullTag = 33;
+}
+
+void TGame::Step()
+{
+
+if ( CheckStep() )
+  {
+
+ //  KingSearch();
+   MyKing();
+   Freeze();
+   StayOnKing();
+   Edit2->Text = IntToStr(KingDisStep(NewX,NewY));
+
+if (  !FREEZE & !KingDisStep(NewX,NewY) &
+   (!CHECK || CHECK & (Screen() || Beat(CheckX,CheckY)|| King(ThisX,ThisY))) )
+
+
+        {
+                 CHECK = 0;
+
+         Castling();
+         DrawSelect( NewX, NewY, clPurple);
+         Image[ThisY][ThisX]->Left = NewX*40 + 32;
+         Image[ThisY][ThisX]->Top =  NewY*40 + 32;
+
+
+   Check();
+   Mat();
+
+
+if ( Figure() )
+  {
+ ThisTag =  Image[ThisY][ThisX]->Tag;
+ NewTag =  Image[NewY][NewX]->Tag;
+
+if ( !SameFigColor() )
+  {
+   Image[NewY][NewX]->Visible = false;
+   Image[NewY][NewX] = NULL;
+  }
+ }
+
+ Image[NewY][NewX] = Image[ThisY][ThisX];
+ Image[ThisY][ThisX] = NULL;
+
+// SendCoord ( );
+  ChangeStep();
+  h++;
+  if ( Mode->Colors->ItemIndex)
+Memo1->Lines->Add(IntToStr(h)+". "+Char(104-ThisX)+IntToStr(ThisY+1)+" - "+Char(104-NewX)+IntToStr(NewY+1) );
+  else
+Memo1->Lines->Add(IntToStr(h)+". "+Char(ThisX+97)+IntToStr(8-ThisY)+" - "+Char(NewX+97)+IntToStr(8-NewY) );
+
+ //Board->Enabled = false;
+ }
+ else Steps = 0;
+        }
+}
+
+void __fastcall TGame::BoardMouseUp(TObject *Sender, TMouseButton Button,
+      TShiftState Shift, int X, int Y)
+{
+
+ Steps++;
+
+    if ( Steps == 1)
+{
+
+  ThisX = div(X-32,40).quot;
+  ThisY = div(Y-32,40).quot;
+
+ if ( Image[ThisY][ThisX]!= NULL  )
+    {
+     ThisTag = Image[ThisY][ThisX]->Tag;
+
+ if (  Flag == 0 & WhiteThis()  || Flag ==1 & BlackThis() )
+
+        DrawSelect( ThisX, ThisY, clGreen);
+else Steps = 0;
+
+   } else Steps = 0;
+}
+
+ if ( Steps == 2 )
+ {
+   NewX = div (X-32,40).quot;
+   NewY = div (Y-32,40).quot;
+   
+   if ( Figure() )
+   NewTag = Image[NewY][NewX]->Tag;
+
+   else
+   NewTag = NullTag ;
+
+
+  if ( NewX != ThisX || NewY != ThisY )
+     {
+      Step();
+      Steps = 0;
+     }
+   else Steps = 0;
+ }
+
+}
+//---------------------------------------------------------------------------
+bool TGame :: WhiteThis()
+{
+if ( ThisTag <= 16 )
+return true;
+}
+
+bool TGame :: WhiteNew()
+{
+if ( NewTag <= 16 )
+return true;
+}
+
+bool TGame :: BlackThis()
+{
+if ( ThisTag > 16 && ThisTag <= 32 )
+return true;
+}
+
+bool TGame::BlackNew()
+{
+if ( NewTag > 16 && NewTag <= 32 )
+return true;
+
+}
+
+bool TGame :: White(int X,int Y)
+{
+ if ( Image[Y][X]!= NULL )
+ if ( Image[Y][X]->Tag <= 16 )
+return true;
+}
+
+bool TGame :: Black(int X,int Y)
+{
+ if ( Image[Y][X]!= NULL )
+if ( Image[Y][X]->Tag > 16 && Image[Y][X]->Tag <= 32 )
+return true;
+}
+
+
+bool TGame::SameFigColor(int X1,int Y1,int X2,int Y2 )
+{
+  if  ( White(X1,Y1) & White(X2,Y2) ||
+        Black(X1,Y1) & Black(X2,Y2) )
+  return true;
+  else
+  return false;
+}
+
+bool TGame::SameFigColor()
+{
+  if  ( WhiteThis() & WhiteNew() || BlackThis() & BlackNew()   )
+  return true;
+  else
+  return false;
+}
+
+bool TGame::Figure()
+{
+if ( Image[NewY][NewX] == NULL )
+return false;
+else
+return true;
+}
+//---------------------------------------------------------------------------
+void TGame:: DrawSelect( int X, int Y, TColor Color )
+{
+    Canvas->Pen->Color = Color;
+    Canvas->Pen->Width = 2;
+    Canvas->MoveTo ( X*40+32 , Y*40+32 );
+    Canvas->LineTo ( X*40+72 , Y*40+32 );
+    Canvas->LineTo ( X*40+72 , Y*40+72 );
+    Canvas->LineTo ( X*40+32 , Y*40+72 );
+    Canvas->LineTo ( X*40+32 , Y*40+32 );
+}
+void TGame:: ChangeStep()
+{
+if ( Flag == 0 )
+ {
+  Edit1->Text = "                 Ход чёрных          ";
+  Flag = 1;
+ }
+  else
+ {
+ Edit1->Text = "                 Ход белых         ";
+  Flag = 0;
+ }
+}
+
+void TGame :: SendCoord ( )
+{
+    char Data[4];
+    Data[0] = ThisX;
+    Data[1] = ThisY;
+    Data[2] = NewX;
+    Data[3] = NewY;
+
+    if ( ServerSocket1->Active )
+        ServerSocket1->Socket->Connections[0]->
+        SendBuf( (void*) Data, sizeof( Data ) );
+
+    else
+        ClientSocket1->Socket->
+        SendBuf( (void*) Data, sizeof( Data ) );
+}
+
+void __fastcall TGame::ServerSocket1ClientRead(TObject *Sender,
+      TCustomWinSocket *Socket)
+{
+ Memo2->Lines->Add(Socket->ReceiveText()) ;
+ int   Size;
+    char* Buffer;
+
+    Size = Socket->ReceiveLength( );
+    Buffer = new char[ Size ];
+    Socket->ReceiveBuf( (void*) Buffer, Size );
+
+
+    ThisX =  Buffer[0];
+    ThisY =  Buffer[1];
+    NewX  =  Buffer[2];
+    NewY  =  Buffer[3];
+
+    delete [] Buffer;
+
+    Step();
+    Board->Enabled = true;
+}
+//---------------------------------------------------------------------------
+bool TGame :: CheckStep()
+{
+if ( WhiteThis() & WhiteNew()==1 || BlackThis() & BlackNew()==1 )
+    return false;    // нельзя ставить на фигуру одного цвета
+
+//else return true;  // фигура чужая или клетка пуста
+
+////////////////ХОД ЛАДЬИ////////////////////////////////////////////////////////
+
+if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"Rook" ) )
+
+  if (RooksRules())
+ {
+  if ( WhiteThis()==1 )
+   WRookSteps++;
+ if ( BlackThis()==1 )
+   BRookSteps++;
+
+   return true;
+ }
+  else
+   return false;
+
+///////////////ХОД ЛОШАДИ///////////////////////////////////////////////////////
+
+
+if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"Horse" ) )
+
+  if ( HorsesRules())
+   return true;
+  else
+   return false;
+
+//////////////ХОД СЛОНА//////////////////////////////////////////////////////
+
+
+if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"Bishop" ) )
+
+  if ( BishopsRules())
+   return true;
+  else
+   return false;
+
+////////////ХОД ФЕРЗЯ////////////////////////////////////////////////////////
+
+
+if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"Queen" ) )
+
+   if ( BishopsRules() || RooksRules() ) //ферзь = ладья+слон
+     return true;
+   else
+     return false;
+
+/////////////ХОД КОРОЛЯ///////////////////////////////////////////////////////
+
+
+if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"King" ) )
+
+  if ( KingsRules() )
+  {
+
+    if ( WhiteThis()==1 )
+      WKingSteps++;
+
+    if ( BlackThis()==1 )
+     BKingSteps++;
+    return true;
+  }
+  else
+   return false;
+
+
+//////////////ХОД ПЕШКИ////////////////////////////////////////////////////////
+
+if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"Pawn" ) )
+
+   if ( PawnsRules() )
+     {
+      ChooseFigure();
+      return true;
+     }
+   else
+     return false;
+
+}
+//////////////////////////////////////////////////////////////////////////////
+bool TGame::RooksRules()
+{
+if ( ThisX == NewX )  //ход по вертикали
+   {
+    if ( ThisY < NewY )   //сверху вниз
+     {
+       for ( int k = ThisY; k < NewY-1; k++ )
+       if ( Image[k+1][ThisX] != NULL )
+
+          return false; // нельзя ходить на пути фигура
+
+          return true; // можно ходить
+
+     }
+     if ( ThisY > NewY ) //снизу вверх
+       {
+        for ( int k = ThisY; k > NewY+1; k-- )
+       if ( Image[k-1][ThisX] != NULL )
+
+           return false; // нельзя ходить на пути фигура
+
+           return true;
+        }
+     }
+
+      if ( ThisY == NewY )  //ход по горизонтали
+   {
+    if ( ThisX < NewX )   // ход вправо
+     {
+       for ( int k = ThisX; k < NewX-1; k++ )
+       if ( Image[ThisY][k+1] != NULL )
+
+           return false; // нельзя ходить на пути фигура
+
+           return true; // можно ходить
+     }
+     if ( ThisX > NewX ) //ход влево
+       {
+        for ( int k = ThisX; k > NewX+1; k-- )
+       if ( Image[ThisY][k-1] != NULL )
+
+           return false; // нельзя ходить на пути фигура
+
+           return true;
+        }
+     }
+   if ( ThisX != NewX && ThisY != NewY )
+
+     return false; //ладья так не ходит!
+
+
+}
+///////////////////////////////////////////////////////////////////////////
+
+bool TGame:: HorsesRules()
+{
+
+if ( ( abs( NewX - ThisX) == 1 && abs( NewY - ThisY) == 2 ) ||
+        ( abs ( NewX - ThisX) == 2 && abs( NewY - ThisY) == 1) )
+      return true;  // лошадью ходи!
+      else
+
+      return false; // учи правила, лошадь ходит буквой Г !!!
+
+}
+/////////////////////////////////////////////////////////////////////////////
+
+bool TGame::BishopsRules()
+{
+     if ( abs (ThisY - NewY) == abs (ThisX - NewX ) )
+ {
+   if ( NewY > ThisY )
+     {
+       if ( NewX > ThisX )
+       {
+         for ( int i = ThisY+1,j = ThisX+1; i < NewY, j < NewX;i++, j++ )
+         if ( Image[i][j] != NULL )
+
+           return false;
+
+       }
+       else
+         for ( int i = ThisY+1, j= ThisX-1;i< NewY, j > NewX; i++,j-- )
+         if ( Image[i][j] != NULL )
+
+           return false;
+     }
+   else
+        {
+        if ( NewX > ThisX )
+            {
+             for (int i=ThisY-1, j=ThisX+1; i>NewY, j<NewX; i--, j++ )
+              if ( Image[i][j]!=NULL )
+
+                return false;
+
+             }
+        else
+            for (int i=ThisY-1, j=ThisX-1; i>NewY, j>NewX; i--, j-- )
+              if ( Image[i][j]!=NULL )
+
+              return false;
+
+        }
+       return true;
+ }     else
+
+       return false;
+
+}
+//////////////////////////////////////////////////////////////////////////////
+
+bool TGame::KingsRules()
+{
+if ( abs(ThisX - NewX) > 1 || abs(ThisY - NewY) > 1 )
+ {
+
+
+  if ( RookKing() )
+  {
+    if ( NewX > 4 && NewX == ThisX+2 ||
+         NewX < 4 && NewX == ThisX-3 )
+     return true;
+    else
+    return false;
+  }
+   else
+   return false;
+ }
+  else
+  return true;
+
+}
+//////////////////////////////////////////////////////////////////////////////
+bool TGame :: KingDisStep(int X,int Y)
+{
+  Attack(X,Y);
+ //Edit2->Text = IntToStr(DISSTEP);
+  if ( King(ThisX,ThisY) &  DISSTEP  )
+  return true;
+  else
+  return false;
+
+}
+/////////////////////////////////////////////////////////////////////
+void TGame:: CheckWay (int X,int Y,int AX,int AY)
+{
+        DISSTEP = 1;
+      if ( Y < AY )
+    {
+     for ( int i = Y+1;i < AY; i++ )
+     if (Image[i][AX] != NULL )
+     DISSTEP = 0;
+     }
+
+     if ( Y > AY )
+    {
+     for ( int i = AY+1;i < Y; i++ )
+     if (Image[i][AX] != NULL )
+      DISSTEP = 0;
+    }
+
+    if ( X < AX)
+    {
+     for ( int i = X+1;i < AX; i++ )
+     if (Image[AY][i] != NULL )
+      DISSTEP = 0;
+    }
+
+    if( X > AX )
+    {
+     for ( int i = AX+1;i < X; i++ )
+     if (Image[AY][i] != NULL )
+    DISSTEP = 0;
+    }
+
+}
+
+void TGame :: Attack(int X,int Y)
+{
+     AttackX = 8; AttackY = 8;  DISSTEP = 0;
+ for ( int i = 0 ; i < 8; i++ )
+   {
+
+   CheckWay(X,Y,X,i);
+if ( DISSTEP && i!=Y && (
+     WhiteThis() & ( BlRook(X,i) || BlQueen(X,i) ) ||
+     BlackThis() & ( WhRook(X,i) || WhQueen(X,i) ) ) )
+     { AttackY = i; AttackX = X; }
+   CheckWay(X,Y,i,Y);
+if ( DISSTEP && i!=X && (
+     WhiteThis() & ( BlRook(i,Y) || BlQueen(i,Y) ) ||
+     BlackThis() & ( WhRook(i,Y) || WhQueen(i,Y) ) )  )
+     { AttackY = Y; AttackX = i; }
+  }
+
+  Edit2->Text = IntToStr(AttackY)+IntToStr(AttackX)+IntToStr(DISSTEP);
+
+    DISSTEP = 0;
+
+if (  Rook(AttackX,AttackY) || Queen(AttackX,AttackY)  )
+    {
+
+     if ( X == AttackX || Y == AttackY )
+       DISSTEP = 1;
+     else
+       DISSTEP = 0;
+
+    }
+
+    for ( int i = 0 ;i < 8; i++ )
+    for ( int j = 0 ;j < 8; j++ )
+    {
+ if ( ( abs(X - i) == abs(Y - j ) && X!=i && Y!=j ) && 
+    ( WhiteThis() &
+    (Image[j][i] == BLBishop || Image[j][i] == BRBishop ||Image[j][i] == BQueen )||
+      BlackThis() &
+    (Image[j][i] == WLBishop || Image[j][i] == WRBishop || Image[j][i] == WQueen )) )
+        {  AttackX = i; AttackY = j; }
+    }
+ //   Edit2->Text = IntToStr(Y)+IntToStr(X)+IntToStr(AttackY)+IntToStr(AttackX);
+ Edit2->Text = IntToStr(AttackY)+IntToStr(AttackX)+IntToStr(DISSTEP);
+   if ( Bishop(AttackX,AttackY) || Queen(AttackX,AttackY) )
+
+   {
+
+     if ( abs(X - AttackX) == abs(Y - AttackY) )
+       {
+        DISSTEP = 1;
+        
+      if ( X == AttackX && Y == AttackY )
+       DISSTEP = 0;
+
+           for ( int i = 1; i < abs(AttackX - X); i++ )
+       {
+        if ( (X < AttackX) & (Y > AttackY) )
+        if (Image[Y-i][X+i]!=NULL )
+         DISSTEP = 0;
+       }
+
+            for ( int i = 1; i < abs(AttackX - X); i++ )
+       {
+        if ( (X > AttackX) & (Y > AttackY) )
+        if (Image[Y-i][X-i]!=NULL )
+          DISSTEP = 0;
+       }
+
+           for ( int i = 1; i < abs(AttackX - X); i++ )
+       {
+        if ( (X > AttackX) & (Y < AttackY) )
+        if (Image[Y+i][X-i]!=NULL )
+           DISSTEP = 0;
+       }
+
+           for ( int i = 1; i < abs(AttackX - X); i++ )
+       {
+        if ( (X < AttackX) & (Y < AttackY) )
+        if (Image[Y+i][X+i]!=NULL )
+          DISSTEP = 0;
+       }
+
+  }
+ }
+    if ( Mode->Colors->ItemIndex == 0 )
+  {
+        if ( WhiteThis() & ( Image[Y-1][X+1]!= NULL ||
+                             Image[Y-1][X-1]!= NULL ) )
+
+ if ( WhiteThis() & Black(X+1,Y-1) &&  strstr(Image[Y-1][X+1]->Name.c_str(),"Pawn" ) ||
+      WhiteThis() & Black(X-1,Y-1) &&  strstr(Image[Y-1][X-1]->Name.c_str(),"Pawn") )
+      DISSTEP = 1;
+
+
+ if ( BlackThis() & ( Image[Y+1][X+1]!= NULL ||
+                      Image[Y+1][X-1]!= NULL ) )
+
+if ( BlackThis() & White(X+1,Y+1) &&  strstr(Image[Y+1][X+1]->Name.c_str(),"Pawn" ) ||
+     BlackThis() & White(X-1,Y+1) &&  strstr(Image[Y+1][X-1]->Name.c_str(),"Pawn") )
+     DISSTEP = 1;
+
+    }
+
+ if ( Mode->Colors->ItemIndex == 1 )
+  {
+        if ( BlackThis() & ( Image[Y-1][X+1]!= NULL ||
+                             Image[Y-1][X-1]!= NULL ) )
+
+ if ( BlackThis() & White(X+1,Y-1) &&  strstr(Image[Y-1][X+1]->Name.c_str(),"Pawn" ) ||
+      BlackThis() & White(X-1,Y-1) &&  strstr(Image[Y-1][X-1]->Name.c_str(),"Pawn") )
+    DISSTEP = 1;
+
+
+ if ( WhiteThis() & ( Image[Y+1][X+1]!= NULL ||
+                      Image[Y+1][X-1]!= NULL ) )
+
+if ( WhiteThis() & Black(X+1,Y+1) &&  strstr(Image[Y+1][X+1]->Name.c_str(),"Pawn" ) ||
+     WhiteThis() & Black(X-1,Y+1) &&  strstr(Image[Y+1][X-1]->Name.c_str(),"Pawn") )
+    DISSTEP = 1;
+
+  }
+
+      for ( int i = 0 ; i < 8; i++ )
+      for ( int j = 0; j < 8; j++ )
+      {
+      if ( (( abs( i - X ) == 1 && abs( j - Y) == 2 ) ||
+           ( abs( i - X ) == 2 && abs( j - Y) == 1)) &
+          ( WhiteThis() & (Image[j][i] == BLHorse  ||
+                          Image[j][i] == BRHorse ) ||
+            BlackThis() & (Image[j][i] == WLHorse   ||
+                          Image[j][i] == WRHorse) ) )
+
+        {  AttackX = i; AttackY = j; }
+
+      }
+
+  if ( Horse(AttackX,AttackY) )
+   {
+  if ( ( abs( AttackX - X ) == 1 && abs( AttackY - Y) == 2 ) ||
+     (   abs( AttackX - X ) == 2 && abs( AttackY - Y) == 1) )
+
+           DISSTEP = 1;
+    }
+
+  for ( int j = Y-1;j<=Y+1; j++ )
+  for ( int i = X-1;i<=X+1; i++ )
+   {
+   if ( (i >=0) && (j >= 0)  || (i < 8) && (j < 8) )
+   if ( WhiteThis() & Image[j][i] == BKing || BlackThis() & Image[j][i]== WKing )
+    DISSTEP = 1;
+   }
+
+
+ //  Edit2->Text = IntToStr(Y)+IntToStr(X)+IntToStr(AttackY)+IntToStr(AttackX);
+}
+/////////////////////////////////////////////////////////////////////
+void TGame :: MyKing()
+{
+   for ( int i = 0 ; i < 8; i++ )
+   for ( int j = 0 ; j < 8; j++ )
+ {
+if (  WhiteThis() & Image[j][i]==WKing || BlackThis() & Image[j][i]==BKing  )
+     { MyKingX = i; MyKingY = j; }
+ }
+}
+//////////////////////////////////////////////////////////////////////////////
+void TGame :: Freeze()
+{
+    for ( int i = 0 ;i < 8; i++ )
+    for ( int j = 0 ;j < 8; j++ )
+    {
+ if (  abs(ThisX - i) == abs(ThisY - j ) &
+    ( WhiteThis() &
+    (Image[j][i] == BLBishop || Image[j][i] == BRBishop ||Image[j][i] == BQueen )||
+      BlackThis() &
+    (Image[j][i] == WLBishop || Image[j][i] == WRBishop || Image[j][i] == WQueen )) )
+        {  Check_X = i; Check_Y = j; }
+    }
+
+       DiffenceB = 0;
+
+  if ( Bishop(Check_X,Check_Y) || Queen(Check_X,Check_Y) )
+  {
+     if ( abs(ThisX - Check_X) == abs(ThisY - Check_Y) &&
+          abs(ThisX - MyKingX) == abs(ThisY - MyKingY)  )
+       {
+           DiffenceB = 0;
+
+             for ( int i = 1; i < abs(KingX - Check_X); i++ )
+       {
+        if ( (Check_X < KingX) & (Check_Y > KingY) )
+        if (Image[Check_Y-i][Check_X+i]!=NULL )
+           DiffenceB++;
+
+       }
+
+            for ( int i = 1; i < abs(KingX - Check_X); i++ )
+       {
+        if ( (Check_X > KingX) & (Check_Y > KingY) )
+        if (Image[Check_Y-i][Check_X-i]!=NULL )
+            DiffenceB++;
+
+        }
+
+           for ( int i = 1; i < abs(KingX - Check_X); i++ )
+       {
+        if ( (Check_X > KingX) & (Check_Y < KingY) )
+        if (Image[Check_Y+i][Check_X-i]!=NULL )
+             DiffenceB++;
+
+       }
+
+          for ( int i = 1; i < abs(KingX - Check_X); i++ )
+       {
+        if ( (Check_X < KingX) & (Check_Y < KingY) )
+        if (Image[Check_Y+i][Check_X+i]!=NULL )
+           DiffenceB++;
+
+       }
+    }
+
+  }
+      DiffenceR = 0; Check__Y = 8; Check__X = 8;
+    for ( int i = 0 ; i < 8; i++ )
+   {
+if ( ThisX == MyKingX &&
+ ( WhiteThis() & ( BlRook(ThisX,i) || BlQueen(ThisX,i) ) ||
+   BlackThis() & ( WhRook(ThisX,i) || WhQueen(ThisX,i) ) ) )
+     { Check__Y = i; Check__X = ThisX; }
+
+if ( ThisY == MyKingY &&
+ ( WhiteThis() & ( BlRook(i,ThisY) || BlQueen(i,ThisY) ) ||
+   BlackThis() & ( WhRook(i,ThisY) || WhQueen(i,ThisY) ) )  )
+     { Check__Y = ThisY; Check__X = i; }
+  }
+ // Edit2->Text = IntToStr(Check__Y)+IntToStr(Check__X);
+
+  if ( Rook(Check__X,Check__Y) || Queen(Check__X,Check__Y) )
+ {
+   if  ( (ThisX == Check__X && ThisX == MyKingX) ||
+         (ThisY == Check__Y && ThisY == MyKingY) )
+   {
+
+    if ( KingY < Check__Y )
+    {
+     for ( int i = KingY+1;i < Check__Y; i++ )
+     if (Image[i][Check__X] != NULL )
+     DiffenceR++;
+     }
+
+    if ( KingY > Check__Y )
+    {
+     for ( int i = Check__Y+1;i < KingY; i++ )
+     if (Image[i][Check__X] != NULL )
+     DiffenceR++;
+     }
+
+    if ( KingX < Check__X)
+    {
+     for ( int i = KingX+1;i < Check__X; i++ )
+     if (Image[Check__Y][i] != NULL )
+     DiffenceR++;
+    }
+
+    if( KingX > Check__X )
+    {
+     for ( int i = Check__X+1;i < KingX; i++ )
+     if (Image[Check__Y][i] != NULL )
+     DiffenceR++;
+    }
+   }
+
+  }
+   if ( (DiffenceB == 1 || DiffenceR == 1) & !King(ThisX,ThisY) )
+       FREEZE = 1;
+       else
+       FREEZE = 0;
+
+
+}
+
+/////////////////////////////////////////////////////////////////
+
+bool TGame:: PawnStep()
+{
+
+   if ( ThisY == 6 || ThisY == 1 )
+  {
+if (  abs(ThisY - NewY) > 2 || abs (ThisX - NewX) > 0 )
+      return false;
+
+      else
+      return true;
+   }
+   else
+  {
+if ( Flag == 0 && abs( ThisY - NewY) != 1  || Flag==1  && abs( NewY-ThisY) != 1
+     || abs(ThisX - NewX ) > 0 )
+     return false;
+
+      else
+      return true;
+   }
+
+}
+
+bool TGame :: PawnBeat()
+{
+
+if ( abs( ThisX - NewX )==1 && abs (ThisY - NewY)==1 & Figure() & !SameFigColor()  )
+    return true;
+    else
+    return false;
+
+
+}
+
+bool TGame::NotReverseStep()
+{
+  if ( Mode->Colors->ItemIndex == 0 )
+ {
+ if ( Flag == 0 && ( ThisY < NewY  ) || Flag==1  && ( ThisY > NewY ) )
+ return false;
+ else
+ return true;
+ }
+ if ( Mode->Colors->ItemIndex == 1 )
+ {
+  if ( Flag == 0 && ( ThisY > NewY  ) || Flag==1  && ( ThisY < NewY ) )
+  return false;
+  else
+  return true;
+ }
+ else return false;
+}
+
+bool TGame:: PawnsRules()
+{
+ if ( NotReverseStep() )
+ {
+  if ( abs( ThisX - NewX ) == 0 & Figure()  )
+
+   return false;
+   else
+
+if ( PawnStep() || PawnBeat() )
+        return true;
+ else
+        return false;
+
+  }
+  else return false;
+}
+
+bool TGame:: PawnChange()
+{
+if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"Pawn" ) && (NewY == 0|| NewY ==7 ) )
+return true;
+else
+return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void TGame::KingSearch()
+{
+   for ( int i = 0 ; i < 8; i++ )
+   for ( int j = 0 ; j < 8; j++ )
+ {
+if (  WhiteThis() & Image[j][i]==BKing || BlackThis() & Image[j][i]==WKing  )
+     { KingX = i; KingY = j; }
+ }
+
+}
+void TGame::ChooseFigure()
+{
+   if ( NewY == 0 || NewY == 7 )
+  {
+   TChoice *Choice = new TChoice(this);
+   Choice->ShowModal();
+
+       if ( Flag == 0 )
+       {
+         if ( Choice->Queen->Checked == true )
+            {
+
+             Graphics::TBitmap*  gBitmap = new Graphics::TBitmap;
+
+HBITMAP hBmp=LoadImage(GetModuleHandle(NULL),"WQueen",IMAGE_BITMAP,0,0,
+                     LR_COPYFROMRESOURCE | LR_DEFAULTCOLOR |
+                     LR_CREATEDIBSECTION);
+ if(hBmp == 0)
+  ShowMessage("Картинка не загружена");
+ else
+  Image[ThisY][ThisX]->Picture->Bitmap->Handle=hBmp;
+
+             Image[ThisY][ThisX]->Name = "XWQueen"+IntToStr(WQ);
+             WQ++;
+
+            }
+
+          if ( Choice->Rook->Checked == true )
+             {
+              Graphics::TBitmap*  gBitmap = new Graphics::TBitmap;
+
+HBITMAP hBmp=LoadImage(GetModuleHandle(NULL),"WRook",IMAGE_BITMAP,0,0,
+                     LR_COPYFROMRESOURCE | LR_DEFAULTCOLOR |
+                     LR_CREATEDIBSECTION);
+ if(hBmp == 0)
+  ShowMessage("Картинка не загружена");
+ else
+  Image[ThisY][ThisX]->Picture->Bitmap->Handle=hBmp;
+
+             Image[ThisY][ThisX]->Name = "XWRook"+IntToStr(WR);
+             WR++;
+             }
+
+           if ( Choice->Bishop->Checked == true )
+            {
+                     Graphics::TBitmap*  gBitmap = new Graphics::TBitmap;
+
+HBITMAP hBmp=LoadImage(GetModuleHandle(NULL),"WBishop",IMAGE_BITMAP,0,0,
+                     LR_COPYFROMRESOURCE | LR_DEFAULTCOLOR |
+                     LR_CREATEDIBSECTION);
+ if(hBmp == 0)
+  ShowMessage("Картинка не загружена");
+ else
+  Image[ThisY][ThisX]->Picture->Bitmap->Handle=hBmp;
+
+             Image[ThisY][ThisX]->Name = "XWBishop"+IntToStr(WB);
+             WB++;
+            }
+           if ( Choice->Horse->Checked == true )
+           {
+                            Graphics::TBitmap*  gBitmap = new Graphics::TBitmap;
+
+HBITMAP hBmp=LoadImage(GetModuleHandle(NULL),"WHorse",IMAGE_BITMAP,0,0,
+                     LR_COPYFROMRESOURCE | LR_DEFAULTCOLOR |
+                     LR_CREATEDIBSECTION);
+ if(hBmp == 0)
+  ShowMessage("Картинка не загружена");
+ else
+  Image[ThisY][ThisX]->Picture->Bitmap->Handle=hBmp;
+
+             Image[ThisY][ThisX]->Name = "XWHorse"+IntToStr(WH);
+             WH++;
+            }
+        }
+              if ( Flag == 1)
+        {
+
+           if ( Choice->Queen->Checked == true )
+            {
+
+             Graphics::TBitmap*  gBitmap = new Graphics::TBitmap;
+
+HBITMAP hBmp=LoadImage(GetModuleHandle(NULL),"BQueen",IMAGE_BITMAP,0,0,
+                     LR_COPYFROMRESOURCE | LR_DEFAULTCOLOR |
+                     LR_CREATEDIBSECTION);
+ if(hBmp == 0)
+  ShowMessage("Картинка не загружена");
+ else
+  Image[ThisY][ThisX]->Picture->Bitmap->Handle=hBmp;
+
+             Image[ThisY][ThisX]->Name = "XBQueen"+IntToStr(BQ);
+             BQ++;
+
+            }
+
+          if ( Choice->Rook->Checked == true )
+             {
+              Graphics::TBitmap*  gBitmap = new Graphics::TBitmap;
+
+HBITMAP hBmp=LoadImage(GetModuleHandle(NULL),"BRook",IMAGE_BITMAP,0,0,
+                     LR_COPYFROMRESOURCE | LR_DEFAULTCOLOR |
+                     LR_CREATEDIBSECTION);
+ if(hBmp == 0)
+  ShowMessage("Картинка не загружена");
+ else
+  Image[ThisY][ThisX]->Picture->Bitmap->Handle=hBmp;
+
+             Image[ThisY][ThisX]->Name = "XBRook"+IntToStr(BR);
+             BR++;
+             }
+
+           if ( Choice->Bishop->Checked == true )
+            {
+                     Graphics::TBitmap*  gBitmap = new Graphics::TBitmap;
+
+HBITMAP hBmp=LoadImage(GetModuleHandle(NULL),"BBishop",IMAGE_BITMAP,0,0,
+                     LR_COPYFROMRESOURCE | LR_DEFAULTCOLOR |
+                     LR_CREATEDIBSECTION);
+ if(hBmp == 0)
+  ShowMessage("Картинка не загружена");
+ else
+  Image[ThisY][ThisX]->Picture->Bitmap->Handle=hBmp;
+
+             Image[ThisY][ThisX]->Name = "XBBishop"+IntToStr(BB);
+             BB++;
+            }
+           if ( Choice->Horse->Checked == true )
+           {
+                            Graphics::TBitmap*  gBitmap = new Graphics::TBitmap;
+
+HBITMAP hBmp=LoadImage(GetModuleHandle(NULL),"BHorse",IMAGE_BITMAP,0,0,
+                     LR_COPYFROMRESOURCE | LR_DEFAULTCOLOR |
+                     LR_CREATEDIBSECTION);
+ if(hBmp == 0)
+  ShowMessage("Картинка не загружена");
+ else
+  Image[ThisY][ThisX]->Picture->Bitmap->Handle=hBmp;
+
+             Image[ThisY][ThisX]->Name = "XBHorse"+IntToStr(BH);
+             BH++;
+            }
+        }
+   }
+}
+//////////////////////////////////////////////////////////////////////////////
+void TGame :: StayOnKing()
+{
+    if ( Bishop(Check_X,Check_Y) )
+ if ( abs(NewX - Check_X) == abs(NewY - Check_Y) )
+    FREEZE = 0;
+
+    if (  Rook(Check__X,Check__Y)  )
+ if ( NewX == Check__X && NewX == MyKingX ||
+      NewY == Check__Y && NewY == MyKingY )
+    FREEZE = 0;
+
+}
+//////////////////////////////////////////////////////////////////////////////
+bool TGame:: Screen()
+{
+ if ( strstr(Image[CheckY][CheckX]->Name.c_str(),"Rook" ) ||
+      strstr(Image[CheckY][CheckX]->Name.c_str(),"Queen" ) )
+if ( NewY==KingY && (NewX > KingX && NewX < CheckX || NewX > CheckX && NewX < KingX) ||
+     NewX==KingX && (NewY > KingY && NewY < CheckY || NewY > CheckY && NewY < KingY)   )
+     return true;
+
+ if ( strstr(Image[CheckY][CheckX]->Name.c_str(),"Bishop" )||
+      strstr(Image[CheckY][CheckX]->Name.c_str(),"Queen" ) )
+        if ( ( abs(NewX   - CheckX) == abs(NewY -  CheckY) )&&
+             ( abs(CheckX - NewX) <  abs(CheckX - KingX) )  &&
+             ( abs(CheckY - NewY) <  abs(CheckY - KingY) )  &&
+             ( abs(KingX  - NewX) <  abs(CheckX - KingX) )  &&
+             ( abs(KingY  - NewY) <  abs(CheckY - KingY) )  )
+
+        return true;
+        else
+        return false;
+
+
+}
+/////////////////////////////////////////////////////////////////////////////
+bool TGame:: Beat(int X,int Y)
+{
+ if ( CHECK && NewX == X && NewY == Y )
+ return true;
+ else
+ return false;
+}
+
+bool TGame :: BeatByKing(int X,int Y)
+{
+  if ( King(ThisX,ThisY) )
+ if ( !DISSTEP && NewX == X && NewY == Y )
+ return true;
+ else
+ return false;
+}
+/////////////////////////////////////////////////////////////////////////////
+void TGame::Check()
+{
+
+if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"Rook" ) ||
+     strstr(Image[ThisY][ThisX]->Name.c_str(),"Queen" ))
+  {
+
+   for ( int i = 0 ; i < 8; i++ )
+   for ( int j = 0 ; j < 8; j++ )
+ {
+if (  WhiteThis() & Image[j][i]==BKing || BlackThis() & Image[j][i]==WKing  )
+     { KingX = i; KingY = j; }
+ }
+
+ if ( KingX == NewX || KingY == NewY )
+     CHECK = 1;
+
+    if ( KingY < NewY )
+    {
+     for ( int i = KingY+1;i < NewY; i++ )
+     if (Image[i][NewX] != NULL )
+     CHECK = 0;
+     }
+
+    if ( KingY > NewY )
+    {
+     for ( int i = NewY+1;i < KingY; i++ )
+     if (Image[i][NewX] != NULL )
+     CHECK = 0;
+     }
+
+    if ( KingX < NewX)
+    {
+     for ( int i = KingX+1;i < NewX; i++ )
+     if (Image[NewY][i] != NULL )
+     CHECK = 0;
+    }
+
+    if( KingX > NewX )
+    {
+     for ( int i = NewX+1;i < KingX; i++ )
+     if (Image[NewY][i] != NULL )
+     CHECK = 0;
+    }
+
+    if ( CHECK )
+        {
+          DrawSelect( KingX, KingY, clBlue);
+          CheckX = NewX; CheckY = NewY;
+       }
+}
+
+     if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"Pawn" ) )
+     {
+        for ( int i =0; i < 8; i++ )
+        for ( int j = 0; j < 8; j++)
+       {
+if ( WhiteThis() & Image[j][i]==BKing || BlackThis() & Image[j][i]==WKing)
+         { KingX = i; KingY = j;}
+       }
+if ( Mode->Colors->ItemIndex == 0 )
+    {
+     if ( WhiteThis()& ( (KingX == NewX+1) && (KingY == NewY-1) ||
+                         (KingX == NewX-1) && (KingY == NewY-1) ) ||
+          BlackThis()& ( (KingX == NewX-1) && (KingY == NewY+1) ||
+                         (KingX == NewX+1) && (KingY == NewY+1) )  )
+         {
+         DrawSelect(KingX,KingY,clBlue);
+         CHECK = 1;
+         CheckX = NewX; CheckY = NewY;
+         }
+     }
+if ( Mode->Colors->ItemIndex == 1 )
+    {
+     if ( BlackThis()& ( (KingX == NewX+1) && (KingY == NewY-1) ||
+                         (KingX == NewX-1) && (KingY == NewY-1) ) ||
+          WhiteThis()& ( (KingX == NewX-1) && (KingY == NewY+1) ||
+                         (KingX == NewX+1) && (KingY == NewY+1) )  )
+         {
+         DrawSelect(KingX,KingY,clBlue);
+         CHECK = 1;
+         CheckX = NewX; CheckY = NewY;
+         }
+     }
+   }
+
+    if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"Horse" ) )
+    {
+      for ( int i = 0 ; i < 8; i++ )
+      for ( int j = 0; j < 8; j++ )
+      {
+      if ( WhiteThis() & Image[j][i] == BKing || BlackThis() & Image[j][i] == WKing )
+        {  KingX = i; KingY = j; }
+
+      }
+
+      if ( ( abs( KingX - NewX) == 1 && abs( KingY - NewY) == 2 ) ||
+          ( abs ( KingX - NewX) == 2 && abs( KingY - NewY) == 1) )
+          {
+           DrawSelect(KingX,KingY,clBlue);
+           CHECK = 1;
+           CheckX = NewX; CheckY = NewY;
+          }
+
+    }
+
+      if ( strstr(Image[ThisY][ThisX]->Name.c_str(),"Bishop" ) ||
+           strstr(Image[ThisY][ThisX]->Name.c_str(),"Queen" ) )
+      {
+
+        for ( int i = 0 ; i < 8; i++ )
+        for ( int j = 0; j < 8; j++ )
+     {
+     if ( WhiteThis() & Image[j][i] == BKing || BlackThis() & Image[j][i] == WKing )
+        {  KingX = i; KingY = j; }
+     }
+
+      if ( abs(NewX - KingX) == abs(NewY - KingY) )
+       {
+       CHECK = 1;
+
+             for ( int i = 1; i < abs(KingX - NewX); i++ )
+       {
+        if ( (NewX < KingX) & (NewY > KingY) )
+        if (Image[NewY-i][NewX+i]!=NULL )
+          {
+            CHECK = 0;
+
+          }
+       }
+
+                  for ( int i = 1; i < abs(KingX - NewX); i++ )
+       {
+        if ( (NewX > KingX) & (NewY > KingY) )
+        if (Image[NewY-i][NewX-i]!=NULL )
+         { CHECK = 0;
+
+         }
+       }
+
+                  for ( int i = 1; i < abs(KingX - NewX); i++ )
+       {
+        if ( (NewX > KingX) & (NewY < KingY) )
+        if (Image[NewY+i][NewX-i]!=NULL )
+         {
+            CHECK = 0;
+
+         }
+       }
+
+                  for ( int i = 1; i < abs(KingX - NewX); i++ )
+       {
+        if ( (NewX < KingX) & (NewY < KingY) )
+        if (Image[NewY+i][NewX+i]!=NULL )
+         {
+           CHECK = 0;
+
+         }
+       }
+
+       //  Edit2->Text = IntToStr(Diffence);
+                if ( CHECK )
+             {
+                DrawSelect(KingX,KingY,clBlue);
+                CheckX = NewX; CheckY = NewY;
+             }
+         }
+
+     }
+}
+//////////////////////////////////////////////////////////////////
+void TGame :: Castling()
+{
+if ( RookKing() )
+  {
+    if ( NewX == ThisX - 3 )
+    {
+     DrawSelect( NewX, NewY, clPurple);
+     Image[NewY][0]->Left = (NewX+1)*40+32;
+     Image[NewY][0]->Top =  NewY*40+32;
+     Image[NewY][NewX+1] = Image[NewY][0];
+     Image[NewY][0] = NULL;
+    }
+   if ( NewX == ThisX+2 )
+    {
+     DrawSelect( NewX, NewY, clPurple);
+     Image[NewY][7]->Left = (NewX-1)*40+32;
+     Image[NewY][7]->Top =  NewY*40+32;
+     Image[NewY][NewX-1] = Image[NewY][7];
+     Image[NewY][7] = NULL;
+    }
+  }
+}
+///////////////////////////////////////////////////////////////////
+bool TGame :: King(int X, int Y)
+{
+  if ( Image[Y][X]!=NULL )
+ if ( strstr(Image[Y][X]->Name.c_str(),"King" ) )
+   return true;
+ else
+   return false;
+ else
+   return false;
+}
+//////////////////////////////////////////////////////////////////////
+bool TGame :: Queen (int X, int Y)
+{
+
+  if ( Image[Y][X]!=NULL )
+ if ( strstr(Image[Y][X]->Name.c_str(),"Queen" ) )
+   return true;
+ else
+   return false;
+ else
+   return false;
+
+}
+//////////////////////////////////////////////////////////////////////
+bool TGame :: Rook (int X, int Y)
+{
+
+  if ( Image[Y][X]!=NULL )
+ if ( strstr(Image[Y][X]->Name.c_str(),"Rook" ) )
+   return true;
+ else
+   return false;
+ else
+   return false;
+
+}
+//////////////////////////////////////////////////////////////////////
+bool TGame :: Bishop (int X, int Y)
+{
+
+  if ( Image[Y][X]!=NULL )
+ if ( strstr(Image[Y][X]->Name.c_str(),"Bishop" ) )
+   return true;
+ else
+   return false;
+ else
+   return false;
+
+}
+//////////////////////////////////////////////////////////////////////
+bool TGame :: Horse (int X, int Y)
+{
+
+  if ( Image[Y][X]!=NULL )
+ if ( strstr(Image[Y][X]->Name.c_str(),"Horse" ) )
+   return true;
+ else
+   return false;
+ else
+   return false;
+
+}
+//////////////////////////////////////////////////////////////////////
+bool TGame :: Pawn (int X, int Y)
+{
+
+  if ( Image[Y][X]!=NULL )
+ if ( strstr(Image[Y][X]->Name.c_str(),"Pawn" ) )
+   return true;
+ else
+   return false;
+ else
+   return false;
+
+}
+//////////////////////////////////////////////////////////////////////
+bool TGame:: RookKing()
+{
+
+  if ( King(ThisX,ThisY) )
+ {
+   if ( !CHECK && !DISSTEP )
+   {
+     if ( WKingSteps == 0 && WRookSteps == 0 ||
+          BKingSteps == 0 && BRookSteps == 0  )
+     {
+
+     if ( Image[ThisY][ThisX+1] == NULL && Image[ThisY][ThisX+2] == NULL ||
+          Image[ThisY][ThisX-3] == NULL && Image[ThisY][ThisX-2] == NULL &&
+          Image[ThisY][ThisX-1] == NULL  )
+     return true;
+     else
+     return false;
+     }
+
+   }
+ }
+}
+////////////////////////////////////////////////////////////////////
+
+bool TGame :: WhRook(int X,int Y)
+{
+if ( White(X,Y) & Rook(X,Y) )
+return true;
+else
+return false;
+}
+/////////////////////////////////////////////////////////////////////
+bool TGame :: BlRook(int X,int Y)
+{
+if ( Black(X,Y) & Rook(X,Y) )
+return true;
+else
+return false;
+}
+//////////////////////////////
+bool TGame :: WhQueen(int X,int Y)
+{
+if ( White(X,Y) & Queen(X,Y) )
+return true;
+else
+return false;
+}
+////////////////////////////////////////////////
+bool TGame :: BlQueen(int X,int Y)
+{
+if ( Black(X,Y) & Queen(X,Y) )
+return true;
+else
+return false;
+}
+
+
+void TGame :: Mat ()
+{
+
+  if ( CHECK )
+ {
+      MAT = 1;
+  for ( int j = KingY-1;j<=KingY+1; j++ )
+  for ( int i = KingX-1;i<=KingX+1; i++ )
+  {
+     if ( ((i >=0) && (j >= 0)  || (i < 8) && (j < 8))  )
+    {
+      Attack(j,i);
+    //  Edit2->Text = IntToStr(DISSTEP);
+      if (  DISSTEP || SameFigColor(KingX,KingY,j,i) )
+      MAT = 1;
+    }
+  }
+   if ( MAT )
+  DrawSelect(KingX,KingY,clRed);
+ }
+}
+
+void __fastcall  TGame::Button1Click(TObject *Sender)
+{
+
+if (Edit2->Text == "")
+return ;
+
+
+Memo2->Lines->Add(Edit2->Text) ;
+
+if (ServerSocket1->Active == true)
+   ServerSocket1->Socket->Connections[0]->SendText(Edit2->Text);
+
+
+else
+   ClientSocket1->Socket->SendText(Edit2->Text);
+
+Edit2->Text = "" ;
+
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TGame::ClientSocket1Read(TObject *Sender,
+      TCustomWinSocket *Socket)
+{
+Memo2->Lines->Add(Socket->ReceiveText()) ;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TGame::ExitClick(TObject *Sender)
+{
+Close();        
+}
+//---------------------------------------------------------------------------
+
+
+
+void __fastcall TGame::AboutClick(TObject *Sender)
+{
+Application->CreateForm(__classid(TAboutBox), &AboutBox);
+  AboutBox->ShowModal();
+  AboutBox->Free();
+}
+//---------------------------------------------------------------------------
+
+
+
+

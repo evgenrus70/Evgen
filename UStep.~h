@@ -1,0 +1,16 @@
+//---------------------------------------------------------------------------
+
+#ifndef UStepH
+#define UStepH
+
+#include "UField.h"
+
+//---------------------------------------------------------------------------
+class TStep
+{
+
+    TField FirstPosition;
+    TField LastPosition;
+
+};
+#endif

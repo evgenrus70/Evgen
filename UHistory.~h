@@ -1,0 +1,22 @@
+//---------------------------------------------------------------------------
+
+#ifndef UHistoryH
+#define UHistoryH
+#include "TGame.h"
+#include "TBoard.h"
+#include "TMode.h"
+#include "TField.h"
+#include "TStep.h"
+#include "TFigure.h"
+#include "THistory.h"
+#include "TPlayer.h"
+//---------------------------------------------------------------------------
+class THistory
+{
+    
+
+    void AddStep(TStep);
+    void GetStepsList();
+
+};
+#endif

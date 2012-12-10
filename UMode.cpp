@@ -1,0 +1,138 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "UGame.h"
+#include "UBoard.h"
+#include "UMode.h"
+#include "UField.h"
+#include "UStep.h"
+#include "UFigure.h"
+#include "UHistory.h"
+#include "UPlayer.h"
+
+#include <winsock.h>
+#include <stdio.h>
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TMode *Mode;
+TPlayer Player;
+TGame *Game;
+
+//---------------------------------------------------------------------------
+__fastcall TMode::TMode(TComponent* Owner)
+        : TForm(Owner)
+{
+
+Player.Adress = this->GetIPAdress();
+IP->Enabled = false;
+
+//---------------
+}
+
+void __fastcall TMode::BeginClick(TObject *Sender)
+{
+
+
+Game = new TGame ( this );
+
+        if ( Colors->ItemIndex == 1 )
+        TurnBoard();
+ Game->ClientSocket1->Host= IP->Text;
+    Game->ClientSocket1->Address = IP->Text;
+ //   Game->Color = Colors->ItemIndex;
+    if ( Colors->ItemIndex == 1 )
+       Game->Board->Enabled = true;
+
+    if ( Mode->ItemIndex == 1 )
+    {
+
+        Game->ServerSocket1->Active = true;
+
+    }
+    else
+    {
+
+        Game->ClientSocket1->Active = true;
+
+    }
+
+    Mode->Visible = false;
+
+Game->ShowModal();
+}
+//---------------------------------------------------------------------------
+AnsiString TMode:: GetIPAdress ()
+{
+
+WORD wVersionRequested;
+    WSADATA wsaData;
+    wVersionRequested = MAKEWORD(1, 0);
+    int err = WSAStartup(wVersionRequested, &wsaData);
+    char *LocalIp = new char[15];
+
+    if(err == 0)
+    {
+        char hn[1024];
+        struct hostent *adr;
+        if(gethostname((char *)&hn, 1024))
+        {
+          //  int err = WSAGetLastError();
+            Beep();
+        };
+        adr = gethostbyname(hn);
+        if(adr)
+        {
+
+          sprintf(LocalIp,"%d.%d.%d.%d",
+          (unsigned char)adr->h_addr_list[0][0],
+          (unsigned char)adr->h_addr_list[0][1],
+          (unsigned char)adr->h_addr_list[0][2],
+          (unsigned char)adr->h_addr_list[0][3]);
+          IP->Text = LocalIp;
+
+        }
+    }
+     return LocalIp;
+
+
+}
+
+void __fastcall TMode::TurnBoard ()
+{
+
+Graphics::TBitmap *pBitmap = new Graphics::TBitmap();
+pBitmap->LoadFromResourceName(0,"board");
+Game->Board->Left=0;
+Game->Board->Top=0;
+Game->Board->Width=pBitmap->Width;
+Game->Board->Height=pBitmap->Height;
+
+
+for(int j=0; j < pBitmap->Height; j++)
+
+Game->Board->Canvas->CopyRect(Rect(0,j,pBitmap->Width,j+1),
+pBitmap->Canvas,Rect(0,j,pBitmap->Width,j+1));
+
+delete pBitmap;
+
+}
+
+void __fastcall TMode::ModeClick(TObject *Sender)
+{
+if ( Mode->ItemIndex )
+        IP->Enabled = false;
+else
+        IP->Enabled = true;
+
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMode::Button1Click(TObject *Sender)
+{
+Close();
+}
+//---------------------------------------------------------------------------
+
